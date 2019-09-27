@@ -1,0 +1,112 @@
+# import all libraries
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+import re
+
+totaldf = pd.DataFrame()
+
+
+# the function to create the URL list from which information should be pulled
+def create_url_list():
+    local_url_list = []
+    starting_page_numbers = []
+
+    # For now the below variable has to be edited to add how many vacancies you want to check
+    input_vacancies_amount = 100
+
+    # find the starting page URL(number) of the newest vacancy on the website
+    opdrachten_page_url = "https://www.freelance.nl/opdrachten"
+    starting_page_number = 0
+    starting_page_numbers = \
+        create_soup(requests.get(opdrachten_page_url)).findAll("a", href=re.compile("/opdracht/.*"))
+
+    # loop to find the highest vacancy number on the front page of the website, so we get the most recent created
+    for number in starting_page_numbers:
+        number = int(re.search(r'\d+', number.get("href")).group())
+        if number > starting_page_number:
+            starting_page_number = number
+    print(starting_page_number)
+
+    # make a list to create the URLs
+    while input_vacancies_amount > 0:
+        local_url_list.append("https://www.freelance.nl/opdracht/" + str(starting_page_number))
+        starting_page_number -= 1
+        input_vacancies_amount -= 1
+    return local_url_list
+
+
+# A function to create a dynamic soup so it can be used in loops
+def create_soup(pageresponse_html):
+    soup = BeautifulSoup(pageresponse_html.text, "html.parser")
+    return soup
+
+
+def find_information():
+    # create the nested soups(10) in a list so we can programatticaly search for data one by one
+    count_total_url = len(total_url_list)
+    count_while = 0
+    localdf = pd.DataFrame()
+
+    while count_while < count_total_url:
+        # create a list that will be filled and put into a function to enter a dataframe
+        status_data = []
+        nested_soup_string = create_soup(requests.get(total_url_list[count_while]))
+        property_options = ["status", "publicatiedatum", "eindklant", "weergaven", "reacties", "referentie",
+                            "inschrijven voor", "op locatie", "startdatum",
+                            "looptijd", "fte (in %)", "tarief", "contract"]
+
+        # append the data
+        try:
+            title_data_in_soup = nested_soup_string.find("div", attrs={"class": "head"}).text.strip()
+            status_data.append(str(title_data_in_soup))
+            status_data.append(str(total_url_list[count_while]))
+
+            # Check all the different modules and find the correct "value" within the Html
+            # Append this to the dataframe
+            for properties in nested_soup_string.find_all("div", class_="properties projectdetails"):
+                name_list = []
+                value_list = []
+                counter = 0
+
+                for span in properties.find_all("span", class_="name"):
+                    name_list.append(span.text.lower().strip())
+
+                for span in properties.find_all("span", class_="value"):
+                    value_list.append(span.text.lower().strip())
+
+                for option in property_options:
+                    if option in name_list:
+                        status_data.append(value_list[counter])
+                        counter += 1
+                    else:
+                        status_data.append(" ")
+
+        except AttributeError:
+            print(total_url_list[count_while] + "; This page is not found")
+
+        count_while += 1
+
+        # appending and transposing the dataframe
+        df = pd.DataFrame(status_data)
+        df = pd.DataFrame.transpose(df)
+        localdf = localdf.append(df, ignore_index=True)
+        print(count_while)
+    return localdf
+
+
+# A function te define the amount of URLs the user wants to go through
+# # Check the availability inside the webpage
+# WIP
+def define_starting_url():
+    Placeholder = 0
+
+
+total_url_list = create_url_list()
+print(total_url_list)
+print("Created the URL list")
+totaldf = totaldf.append(find_information(), ignore_index=True)
+print("Found all the information")
+print(totaldf)
+totaldf.to_csv("Ik heb het gefixt.csv", encoding='utf-8')
+print("Created a CSV file on the local file location")
