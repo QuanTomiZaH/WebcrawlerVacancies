@@ -16,7 +16,7 @@ def create_url_list():
     input_vacancies_amount = 100
 
     # find the starting page URL(number) of the newest vacancy on the website
-    opdrachten_page_url = "https://www.freelance.nl/opdrachten"
+    opdrachten_page_url = "<URL>"
     starting_page_number = 0
     starting_page_numbers = \
         create_soup(requests.get(opdrachten_page_url)).findAll("a", href=re.compile("/opdracht/.*"))
@@ -30,7 +30,7 @@ def create_url_list():
 
     # make a list to create the URLs
     while input_vacancies_amount > 0:
-        local_url_list.append("https://www.freelance.nl/opdracht/" + str(starting_page_number))
+        local_url_list.append("<URL>" + str(starting_page_number))
         starting_page_number -= 1
         input_vacancies_amount -= 1
     return local_url_list
